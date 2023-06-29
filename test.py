@@ -1,9 +1,12 @@
 from flask import Flask, render_template, request, url_for
 import re
 import bleach
+# import mysql.connector
+import pymysql
 
 # création de l'application
 app = Flask(__name__)
+
 
 # créé une route pour accéder à mon serveur temp et accéder à la page "Home"
 @app.route('/') 
@@ -13,6 +16,21 @@ def home():
 # Créé la route de la page de validation
 @app.route('/retour', methods=['POST']) 
 
+def insert_data(nom, prenom, email, pays, genre, message, sujets):
+    connexion = pymysql.connect(host='127.0.0.1', user='root', 
+                                password='root', database='dbtest')
+    
+    cursor = connexion.cursor()
+    
+    query = "INSERT INTO info_user (nom, prenom, email, pays, genre, messafe, sujets) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+
+    cursor.execute(query, (nom, prenom, email, pays, genre, message, ','.join(sujets)))
+    
+    connexion.commit()
+    
+    cursor.close()
+    connexion.close()
+    
 # Création de la fonction principale 
 # Définition de la fonction de validation des données du formulaire, vérifaction des données, protection des données ainsi que renvoie vers la page de feedback.
 def form_valide():
@@ -32,8 +50,7 @@ def form_valide():
     message = bleach.clean(request.form.get('message'))
     sujets = request.form.getlist('sujets')  # Utilisez getlist() pour récupérer une liste de valeurs
     honeypot = request.form.get('honeypot')  # Champ honeypot
-    
-    
+      
     # Vérification des caractères dans "nom" et "prenom"
     if not re.match(r'^[A-Za-zÀ-ÿ\s-]+$', nom) or not re.match(r'^[A-Za-zÀ-ÿ\s-]+$', prenom):
         return "Le nom et le prénom doivent contenir uniquement des lettres et/ou être rempli."
@@ -54,9 +71,11 @@ def form_valide():
     if honeypot:
         return "Êtes-vous un robot ?"
     
+    insert_data(nom, prenom, email, pays, genre, message, sujets)
     # renvoyé toutes les infos entré sur la page retour.html pour avoir un feedback.
     return render_template('retour.html', prenom = prenom, nom = nom, email = email, pays = pays, genre = genre, message = message, sujets = sujets )
 
 # Lancement de l'app via le terminal
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
+
