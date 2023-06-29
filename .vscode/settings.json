@@ -14,5 +14,6 @@
             "username": "ark",
             "password": "root"
         }
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "off"
 }

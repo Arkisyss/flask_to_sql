@@ -1,10 +1,18 @@
 from flask import Flask, render_template, request, url_for
 import re
 import bleach
-
+import pymysql
 
 # création de l'application
 app = Flask(__name__)
+
+# configuration des données de la db
+db_config = {
+    'user' : 'root',
+    'password' : 'root',
+    'host' : '127.0.0.1',
+    'database' : 'flaskdb'
+}
 
 # créé une route pour accéder à mon serveur temp et accéder à la page "Home"
 @app.route('/') 
@@ -54,8 +62,56 @@ def form_valide():
     if honeypot:
         return "Êtes-vous un robot ?"
     
+    # Appel de la fonction insert_data pour insérer les données dans la db
+    insert_data(nom, prenom, email, pays, genre, message, sujets)
+    
     # renvoyé toutes les infos entré sur la page retour.html pour avoir un feedback.
     return render_template('retour.html', prenom = prenom, nom = nom, email = email, pays = pays, genre = genre, message = message, sujets = sujets )
+ 
+ # fonctions qui va insérer les données, les changer et dans la db
+def insert_data(nom, prenom, email, pays, genre, message, sujets):
+    connexion = pymysql.connect(host='127.0.0.1', user='root', 
+                                password='root', database='flaskdb')
+    
+    # créér un cursor pour exécuter les requètes SQL
+    cursor = connexion.cursor()
+    
+    # Défini la requête d'insertion avec des paramètres (%s) pour les valeurs à insérer
+    query = "INSERT INTO info_user (nom, prenom, email, pays, genre, message, sujets) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+
+    # Exécute la requête en fournissant les valeurs à insérer dans le tuple
+    cursor.execute(query, (nom, prenom, email, pays, genre, message, ','.join(sujets)))
+    
+    # valide les changements de db
+    connexion.commit()
+    
+    #ferme le cursor et la connexion
+    cursor.close()
+    connexion.close()
+
+# fonctions de création de tables pour la db
+def create_info_user_table():
+    connect = pymysql.connect(**db_config)
+    cursor = connect.cursor()
+
+    # Création de la table "info_user" sur mariadb
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS info_user (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            nom VARCHAR(20) NOT NULL,
+            prenom VARCHAR(20) NOT NULL,
+            email VARCHAR(50) NOT NULL,
+            pays VARCHAR(50) NOT NULL,
+            genre VARCHAR(10) NOT NULL,
+            message TEXT NOT NULL,
+            sujets TEXT NOT NULL
+        )
+    """)
+
+    connect.commit()
+    connect.close()
+
+create_info_user_table()
 
 # Lancement de l'app via le terminal
 if __name__ == "__main__":
